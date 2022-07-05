@@ -1,18 +1,21 @@
 from time import sleep
 from random import randint
-from threading import Thread, Lock, Condition
+from threading import Thread, Lock, Condition, current_thread
 
 def produtor():
   global buffer
   for i in range(10):
     sleep(randint(0,2))           # fica um tempo produzindo...
-    item = 'item ' + str(i)
+    if current_thread().name == "P1":
+      item = 'item ' + str(i)
+    else:
+      item = 'item ' + str(i+10)
     with lock:
       if len(buffer) == tam_buffer:
-        print('>>> Buffer cheio. Produtor ira aguardar.')
+        print(f'>>> Buffer cheio. Produtor {current_thread().name} ira aguardar.')
         lugar_no_buffer.wait()    # aguarda que haja lugar no buffer
       buffer.append(item)
-      print('Produzido %s (ha %i itens no buffer)' % (item,len(buffer)))
+      print(f'{current_thread().name}: Produzido {item} (ha {len(buffer)} itens no buffer)')
       item_no_buffer.notify()
 
 def consumidor():
@@ -20,10 +23,10 @@ def consumidor():
   for i in range(10):
     with lock:
       if len(buffer) == 0:
-        print('>>> Buffer vazio. Consumidor ira aguardar.')
+        print(f'>>> Buffer vazio. Consumidor {current_thread().name} ira aguardar.')
         item_no_buffer.wait()   # aguarda que haja um item para consumir 
       item = buffer.pop(0)
-      print('Consumido %s (ha %i itens no buffer)' % (item,len(buffer)))
+      print(f'{current_thread().name}: Consumido {item} (ha {len(buffer)} itens no buffer)')
       lugar_no_buffer.notify()
     sleep(randint(0,2))         # fica um tempo consumindo...
 
@@ -32,9 +35,15 @@ tam_buffer = 5
 lock = Lock()
 lugar_no_buffer = Condition(lock)
 item_no_buffer = Condition(lock)
-produtor = Thread(target=produtor) 
-consumidor = Thread(target=consumidor) 
-produtor.start()
-consumidor.start()
-produtor.join()
-consumidor.join() 
+produtor1 = Thread(target=produtor,name="P1") 
+produtor2 = Thread(target=produtor,name="P2") 
+consumidor1 = Thread(target=consumidor,name="C1") 
+consumidor2 = Thread(target=consumidor,name="C2") 
+produtor1.start()
+consumidor1.start()
+produtor2.start()
+consumidor2.start()
+produtor1.join()
+consumidor1.join()
+produtor2.join()
+consumidor2.join()
